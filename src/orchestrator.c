@@ -19,6 +19,7 @@
 int spawn_service(int index) {
     pid_t pid;
 
+
     // TODO: Invocar la creación del proceso hijo.
 
     // Casos a manejar:
@@ -26,5 +27,22 @@ int spawn_service(int index) {
     // - Lógica del proceso HIJO (Setup de límites y Ejecución).
     // - Lógica del proceso PADRE (Gestión del dashboard).
 
-    return 0; // Cambiar por el PID real
+    pid = fork();
+
+    if ( pid <0 ){
+        perror("[Orchestrator] says: critic error executing fork");
+        exit(EXIT_FAILURE);
+        
+    } else if ( pid == 0 ){
+        apply_resource_limits(dashboard[index].mem_limit);
+        char *args[] = {dashboard[index].name, NULL};
+        execvp(dashboard[index].path,args);
+        perror("[Orchestrator] says: execvp failed");
+        exit(EXIT_FAILURE);
+    } else {
+        dashboard[index].pid = pid;
+        dashboard[index].state = STATE_RUNNING;
+        return pid;
+    }
+
 }
