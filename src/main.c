@@ -90,6 +90,10 @@ void handle_shutdown(int sig) {
 }
 
 int main(int argc, char *argv[]) {
+    (void)argc;
+    (void)argv;
+
+
     // 1. Inicialización de mecanismos de sincronización
     if (pthread_mutex_init(&dashboard_mutex, NULL) != 0) {
         perror("Error inicializando mutex");
