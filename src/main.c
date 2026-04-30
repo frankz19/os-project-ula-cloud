@@ -31,7 +31,34 @@ void print_dashboard() {
     printf("--------------------------------------------------------------\n");
 
     // TODO: Renderizar cada fila del dashboard con la información actualizada.
+    pthread_mutex_lock(&dashboard_mutex);
 
+    for (int i = 0 ; i < num_services ; i++){
+        char state_str[30];
+
+        switch (dashboard[i].state){
+
+        case STATE_IDLE:
+            strcpy(state_str, "IDLE");
+            break;
+        case STATE_RUNNING:
+            strcpy(state_str, "RUNNING");
+            break;
+        case STATE_STOPPED:
+            strcpy(state_str, "STOPPED");
+            break;
+        case STATE_CRASHED:
+            strcpy(state_str, "CRASHED");
+            break;
+        case STATE_KILLED:
+            strcpy(state_str, "KILLED");
+            break;
+        default: strcpy(state_str, "UNKNOWN");
+            break;
+        }
+        printf("%-15s %-10d %-25s %-10d\n", dashboard[i].name, dashboard[i].pid, state_str, dashboard[i].exit_status);
+    }
+    pthread_mutex_unlock(&dashboard_mutex);
     printf("==============================================================\n");
 }
 
@@ -43,7 +70,20 @@ void handle_shutdown(int sig) {
     printf("\n[ULA-Cloud] Iniciando secuencia de apagado...\n");
     
     // TODO: Notificar y limpiar recursos de procesos hijos.
-    
+    printf("\n[ULA-Cloud] Protocolo de apagado...\n");
+    pthread_mutex_lock(&dashboard_mutex);
+
+    for ( int i = 0 ; i < num_services ; i++){
+        if ( dashboard[i].state == STATE_RUNNING && dashboard[i].pid > 0) {
+            printf("\n[ULA-Cloud] Servicio %s PID: %d Killed.\n", dashboard[i].name, dashboard[i].pid);
+            kill(dashboard[i].pid, SIGTERM);
+        }
+    }
+    pthread_mutex_unlock(&dashboard_mutex);
+    pthread_mutex_destroy(&dashboard_mutex);
+    printf("\n[ULA-Cloud] Apagado completo.\n");
+
+
     exit(0);
 }
 
@@ -79,6 +119,14 @@ int main(int argc, char *argv[]) {
         /* * TODO: Orquestar el despliegue de servicios y su posterior 
          * monitoreo concurrente. 
          */
+
+         pid_t child_pid = spawn_service(i);
+
+         if ( child_pid > 0 ){
+            if ( pthread_create(&dashboard[i].monitor_thread, NULL, monitor_service, &dashboard[i] ) != 0 ){
+                perror("[Main] says: thread monitor creation failed");
+            }
+         }
     }
 
     // 5. Ciclo de monitoreo principal

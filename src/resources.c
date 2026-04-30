@@ -21,6 +21,7 @@ void apply_resource_limits(size_t mem_limit) {
     resource_limit.rlim_cur = mem_limit;
     resource_limit.rlim_max = mem_limit;
 
+    //if ( setrlimit(RLIMIT_DATA, &resource_limit) != 0 ){ (pruebas en mac frank)
     if ( setrlimit(RLIMIT_AS, &resource_limit) != 0 ){
         perror("[Resources] says: set limits failed");
         exit(EXIT_FAILURE);
