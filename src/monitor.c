@@ -32,5 +32,31 @@ void* monitor_service(void *arg) {
      * No olvides liberar el mecanismo de sincronización al terminar.
      */
 
+    service_t *service = (service_t *)arg;
+    int status;
+    
+    if(waitpid( service->pid, &status, 0) < 0){
+        perror("[Monitor] says: waitpid error");
+        return NULL;
+    }
+
+    pthread_mutex_lock(&dashboard_mutex);
+
+    if (WIFEXITED(status)) {
+        service->exit_status = WEXITSTATUS(status);
+
+        if(service->exit_status == 0){
+            service->state = STATE_STOPPED;
+        }else{
+            service->state = STATE_CRASHED;
+        }
+        
+    } else if (WIFSIGNALED(status)) {
+        service->exit_status = WTERMSIG(status);
+        service->state = STATE_KILLED;
+    }
+
+    pthread_mutex_unlock(&dashboard_mutex);
+
     return NULL;
 }
